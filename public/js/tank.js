@@ -3,7 +3,7 @@ var tankWidth = 20;
 var tankHeight = 30;
 
 // A Tank Class
-function Tank(startPos, tankColor, newtankid, playerName) {
+function Tank(startPos, startColor, newtankid, playerName) {
     this.pos = startPos.copy();
     this.r = 20;
     this.heading = 0;
@@ -11,9 +11,12 @@ function Tank(startPos, tankColor, newtankid, playerName) {
     this.vel = createVector(0, 0);
     this.isBoosting = false;
     this.destroyed = false;
-    this.tankColor = tankColor;
+    this.tankColor = startColor;
     this.tankid = newtankid;
     this.playerName = playerName;
+    //CAM'S CODE
+    this.team = "";
+    //CAM'S CODE
 
     // For an optional boost feature
     this.boosting = function(b) {
@@ -55,7 +58,11 @@ function Tank(startPos, tankColor, newtankid, playerName) {
 
         push();
         translate(this.pos.x, this.pos.y);
-        fill(this.tankColor);
+        // CAM'S CODE self text is white
+        if (this.tankid==mytankid)
+          fill('white');
+        else
+          fill(this.tankColor);
         textAlign(CENTER);
         if(DEBUG && DEBUG==1)
           text(this.tankid, 0, 30);

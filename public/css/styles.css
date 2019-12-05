@@ -76,6 +76,48 @@ footer .footer-contents {
 .home-link {
   font-weight: bold;
 }
+/* CAM'S CODE */
+.loading-screen {
+  background-color: rgba(248, 247, 216, 0.7);
+  position: absolute;
+  top: 62px;
+  left: 0;
+  width: 600px;
+  height: 600px;
+}
+.countdown {
+  position: absolute;
+  top: 62px;
+  width: 60px;
+  height: 60px;
+}
+.team-names {
+  position: absolute;
+  top: 150px;
+  width: 250px;
+  height: 60px;
+}
+.middle-line {
+  background-color: black;
+  position: absolute;
+  top: 150px;
+  left: 300px;
+  width: 5px;
+  height: 480px;
+}
+.player-blue {
+  background-color: rgba(123, 229, 255, 0.7);
+  position: absolute;
+  width: 15%;
+  height: 15%;
+}
+.player-red {
+  background-color: rgba(255, 112, 112, 0.7);
+  position: absolute;
+  width: 15%;
+  height: 15%;
+}
+/* CAM'S CODE */
 
 .message {
   position: relative;

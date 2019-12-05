@@ -4,6 +4,11 @@ let tanks = []; // All tanks in the game
 let shots = []; // All shots in the game
 var mytankid;
 var myTankIndex = -1;
+var startColor;
+//CAM'S CODE for team color to be set
+var curTeamColor;
+//CAM'S CODE for start of game
+var gameStarted = false, lobbyVisible = true;
 
 var socket;
 var oldTankx, oldTanky, oldTankHeading;
@@ -46,6 +51,10 @@ function setup() {
   socket.on('ServerResetAll', ServerResetAll);
   socket.on('ServerMoveShot', ServerMoveShot);
   socket.on('ServerNewShot', ServerNewShot);
+  socket.on('SendTeamColor', SendTeamColor);
+  socket.on('UpdateCounter', UpdateCounter);
+  socket.on('HideLoadScreen', HideLoadScreen);
+  socket.on('StartGame', StartGame);
 
   // Join (or start) a new game
   socket.on('connect', function(data) {
@@ -57,76 +66,78 @@ function setup() {
 // Draw the screen and process the position updates
 function draw() {
     background(0);
+    //CAM'S CODE only draw once loading screen is gone
+    if (!lobbyVisible) {
+      // Loop counter
+      if(loopCount > 359*10000)
+        loopCount = 0;
+      else
+        loopCount++;
 
-    // Loop counter
-    if(loopCount > 359*10000)
-      loopCount = 0;
-    else
-      loopCount++;
-
-    // Process shots
-    for (var i = shots.length - 1; i >= 0; i--) {
-      shots[i].render();
-      shots[i].update();
-      if (shots[i].offscreen()) {
-        shots.splice(i, 1);
-      }
-      else {
-        let shotData = { x: shots[i].pos.x, y: shots[i].pos.y, 
-          shotid: shots[i].shotid };
-        socket.emit('ClientMoveShot', shotData);
-      }
-    }
-    // Process all the tanks by iterating through the tanks array
-    if(tanks && tanks.length > 0) {
-      for (var t = 0; t < tanks.length; t++) {
-        if(tanks[t].tankid==mytankid) {
-          tanks[t].render();
-          tanks[t].turn();
-          tanks[t].update();
-
-          // Check for off screen and don't let it go any further
-          if(tanks[t].pos.x < 0)
-            tanks[t].pos.x = 0;
-            if(tanks[t].pos.x > win.width)
-            tanks[t].pos.x = win.width;
-            if(tanks[t].pos.y < 0)
-            tanks[t].pos.y = 0;
-            if(tanks[t].pos.y > win.height)
-            tanks[t].pos.y = win.height;
-            
+      // Process shots
+      for (var i = shots.length - 1; i >= 0; i--) {
+        shots[i].render();
+        shots[i].update();
+        if (shots[i].offscreen()) {
+          shots.splice(i, 1);
         }
-        else {  // Only render if within 150 pixels
-//          var dist = Math.sqrt( Math.pow((tanks[myTankIndex].pos.x-tanks[t].pos.x), 2) + Math.pow((tanks[myTankIndex].pos.y-tanks[t].pos.y), 2) );
-//          if(dist < 151)
+        else {
+          let shotData = { x: shots[i].pos.x, y: shots[i].pos.y, 
+            shotid: shots[i].shotid };
+          socket.emit('ClientMoveShot', shotData);
+        }
+      }
+      // Process all the tanks by iterating through the tanks array
+      if(tanks && tanks.length > 0) {
+        for (var t = 0; t < tanks.length; t++) {
+          if(tanks[t].tankid==mytankid) {
             tanks[t].render();
-        }
-      }
-      
-      // Demo Spinning Power-Up
-      /*
-      push();
-        translate(win.width/2, win.height/2);
-        rotate(radians(this.loopCount));
-        scale(cos(this.loopCount/40.0)+4.0);
-        fill(color(255, 204, 0));
-        strokeWeight(0);
-        rect(0, 0, 5, 5);
-        push();
-          rotate(radians(this.loopCount*-1));
-          scale(.4);
-          textAlign(CENTER, CENTER);
-          fill(255);
-          stroke(255);
-          text("P", 0, 0);
-        pop();
-      pop();
-      */
+            tanks[t].turn();
+            tanks[t].update();
 
+            // Check for off screen and don't let it go any further
+            if(tanks[t].pos.x < 0)
+              tanks[t].pos.x = 0;
+              if(tanks[t].pos.x > win.width)
+              tanks[t].pos.x = win.width;
+              if(tanks[t].pos.y < 0)
+              tanks[t].pos.y = 0;
+              if(tanks[t].pos.y > win.height)
+              tanks[t].pos.y = win.height;
+              
+          }
+          else {  // Only render if within 150 pixels
+  //          var dist = Math.sqrt( Math.pow((tanks[myTankIndex].pos.x-tanks[t].pos.x), 2) + Math.pow((tanks[myTankIndex].pos.y-tanks[t].pos.y), 2) );
+  //          if(dist < 151)
+              tanks[t].render();
+          }
+        }
+        
+        // Demo Spinning Power-Up
+        /*
+        push();
+          translate(win.width/2, win.height/2);
+          rotate(radians(this.loopCount));
+          scale(cos(this.loopCount/40.0)+4.0);
+          fill(color(255, 204, 0));
+          strokeWeight(0);
+          rect(0, 0, 5, 5);
+          push();
+            rotate(radians(this.loopCount*-1));
+            scale(.4);
+            textAlign(CENTER, CENTER);
+            fill(255);
+            stroke(255);
+            text("P", 0, 0);
+          pop();
+        pop();
+        */
+
+      }
     }
 
       // To keep this program from being too chatty => Only send server info if something has changed
-      if(tanks && tanks.length > 0 && myTankIndex > -1
+    if(tanks && tanks.length > 0 && myTankIndex > -1
         && (oldTankx!=tanks[myTankIndex].pos.x || oldTanky!=tanks[myTankIndex].pos.y || oldTankHeading!=tanks[myTankIndex].heading)) {
         let newTank = { x: tanks[myTankIndex].pos.x, y: tanks[myTankIndex].pos.y, 
           heading: tanks[myTankIndex].heading, tankColor: tanks[myTankIndex].tankColor, 
@@ -135,8 +146,8 @@ function draw() {
         oldTankx = tanks[myTankIndex].pos.x;
         oldTanky = tanks[myTankIndex].pos.y;
         oldTankHeading = tanks[myTankIndex].heading;
-      }
     }
+}
     
 
   // Handling pressing a Keys
@@ -148,23 +159,25 @@ function draw() {
     // Can not be a destroyed tank!
     if (tanks[myTankIndex].destroyed)
       return;
-
-    if (key == ' ') {                       // Fire Shell
-      const shotid = random(0, 50000);
-      shots.push(new Shot(shotid, tanks[myTankIndex].tankid, tanks[myTankIndex].pos, 
-        tanks[myTankIndex].heading, tanks[myTankIndex].tankColor));
-      let newShot = { x: tanks[myTankIndex].pos.x, y: tanks[myTankIndex].pos.y, heading: tanks[myTankIndex].heading, 
-        tankColor: tanks[myTankIndex].tankColor, shotid: shotid, tankid: tanks[myTankIndex].tankid };
-      socket.emit('ClientNewShot', newShot);
-      return;
-    } else if (keyCode == RIGHT_ARROW) {  // Move Right
-      tanks[myTankIndex].setRotation(0.1);
-    } else if (keyCode == LEFT_ARROW) {   // Move Left
-      tanks[myTankIndex].setRotation(-0.1);
-    } else if (keyCode == UP_ARROW) {     // Move Forward
-      tanks[myTankIndex].moveForward(1.0);
-    } else if (keyCode == DOWN_ARROW) {   // Move Back
-      tanks[myTankIndex].moveForward(-1.0);
+    // CAM'S CODE only allow movement if game has started
+    if (gameStarted) {
+      if (key == ' ') {                       // Fire Shell
+        const shotid = random(0, 50000);
+        shots.push(new Shot(shotid, tanks[myTankIndex].tankid, tanks[myTankIndex].pos, 
+          tanks[myTankIndex].heading, tanks[myTankIndex].tankColor));
+        let newShot = { x: tanks[myTankIndex].pos.x, y: tanks[myTankIndex].pos.y, heading: tanks[myTankIndex].heading, 
+          tankColor: tanks[myTankIndex].tankColor, shotid: shotid, tankid: tanks[myTankIndex].tankid };
+        socket.emit('ClientNewShot', newShot);
+        return;
+      } else if (keyCode == RIGHT_ARROW) {  // Move Right
+        tanks[myTankIndex].setRotation(0.1);
+      } else if (keyCode == LEFT_ARROW) {   // Move Left
+        tanks[myTankIndex].setRotation(-0.1);
+      } else if (keyCode == UP_ARROW) {     // Move Forward
+        tanks[myTankIndex].moveForward(1.0);
+      } else if (keyCode == DOWN_ARROW) {   // Move Back
+        tanks[myTankIndex].moveForward(-1.0);
+      }
     }
 
 
@@ -183,7 +196,39 @@ function draw() {
 
   
   //  ***** Socket communication handlers ******
+  //CAM'S CODE various functions
+  function SendTeamColor(data) {
+    curTeamColor = data;
+    console.log("CurTeamColor: ", curTeamColor);
+  }
 
+  function UpdateCounter(data) {
+    var counter = document.getElementById('countDown');
+    //makes one digit numbers centered & red
+    if (data < 10) {
+      counter.style.left = "283px";
+      counter.style.color = "#AA0000";
+    }
+    //makes two digit numbers centered & green
+    else {
+      counter.style.left = "270px";
+      counter.style.color = "#00AA00";
+    }
+    counter.innerText = data;
+  }
+  function HideLoadScreen() {
+    document.getElementById('loadingScreen').style.display = "none";
+    document.getElementById('blueTeamName').style.display = "none";
+    document.getElementById('redTeamName').style.display = "none";
+    document.getElementById('midLine').style.display = "none";
+
+    lobbyVisible = false;
+  }
+  function StartGame() {
+    gameStarted = true;
+    document.getElementById('countDown').style.display = "none";
+  }
+  //CAM'S CODE functions end
   function ServerReadyAddNew(data) {
     console.log('Server Ready');
 
@@ -192,21 +237,31 @@ function draw() {
     mytankid = undefined;
     myTankIndex = -1;
 
-    // Create the new tank
-    // Make sure it's starting position is at least 20 pixels from the border of all walls
-    let startPos = createVector(Math.floor(Math.random()*(win.width-40)+20), Math.floor(Math.random()*(win.height-40)+20));
-    let startColor = color(Math.floor(Math.random()*255), Math.floor(Math.random()*255), Math.floor(Math.random()*255));
-    let newTank = { x: startPos.x, y: startPos.y, heading: 0, tankColor: startColor, tankid: socketID, playername: PlayerName };
+    //CAM'S CODE
+    socket.emit('GetTeamColor');
+    //Wait for server to respond with teamColor
+    setTimeout(() => {
+      console.log("curTeamColor: '", curTeamColor, "'");
+      if (curTeamColor == "Red")
+        startColor = color(255, 0, 0);
+      else
+        startColor = color(0, 0, 255);
+      //CAM'S CODE
 
+      // Create the new tank
+      // Make sure it's starting position is at least 20 pixels from the border of all walls
+      let startPos = createVector(Math.floor(Math.random()*(win.width-40)+20), Math.floor(Math.random()*(win.height-40)+20));
+      let newTank = { x: startPos.x, y: startPos.y, heading: 0, tankColor: startColor, tankid: socketID, playername: PlayerName };
 
-    // Create the new tank and add it to the array
-    mytankid = socketID;
-    myTankIndex = tanks.length;
-    var newTankObj = new Tank(startPos, startColor, mytankid, PlayerName)
-    tanks.push(newTankObj);
+      // Create the new tank and add it to the array
+      mytankid = socketID;
+      myTankIndex = tanks.length;
+      var newTankObj = new Tank(startPos, startColor, mytankid, PlayerName)
+      tanks.push(newTankObj);
 
-    // Send this new tank to the server to add to the list
-    socket.emit('ClientNewTank', newTank);
+      // Send this new tank to the server to add to the list
+      socket.emit('ClientNewTank', newTank);
+    }, 1500);
   }
 
     // Server got new tank -- add it to the list
@@ -231,6 +286,7 @@ function draw() {
             // Add this tank to the end of the array
             let startPos = createVector(Number(data[d].x), Number(data[d].y));
             let c = color(data[d].tankColor.levels[0], data[d].tankColor.levels[1], data[d].tankColor.levels[2]);
+            // CAM'S CODE switched c and tankid around
             let newTankObj = new Tank(startPos, c, data[d].tankid, data[d].playername);
             tanks.push(newTankObj);
           }

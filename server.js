@@ -6,6 +6,9 @@ const request = require('request');
 // Game items to remember
 var tanks = [];
 var shots = [];
+//CAM'S CODE variables for team colors & game start info
+var teamColor = "Red";
+var gameStart = false, loadScreen = true;
 
 // Set up the server
 // process.env.PORT is related to deploying on AWS
@@ -71,7 +74,48 @@ io.sockets.on('connection',
 
       }
     );
-    
+    //CAM'S CODE added new function to change team
+    socket.on('GetTeamColor',
+      function() {
+        console.log("Team Color: ", teamColor);
+        if (teamColor == "Red")
+          teamColor = "Blue";
+        else
+          teamColor = "Red";
+        console.log("Team Color: ", teamColor);
+        io.sockets.emit('SendTeamColor', teamColor);
+      }
+    );
+    //CAM'S CODE
+    var StartCounter = function(waitTime, startTime) {
+        var counter = waitTime;
+        var countdown = setInterval(() => {
+           //for the final message
+           if (counter <= 0 && !loadScreen)
+             io.sockets.emit('UpdateCounter', "GO");
+           else
+             io.sockets.emit('UpdateCounter', counter);
+
+           if (counter > 0)
+            counter--;
+           // when timer runs out and loading screen still up
+           else if (loadScreen) {
+             counter = startTime;
+             io.sockets.emit('HideLoadScreen');
+             loadScreen = false;
+           }           
+           // add one more second for the "GO" message
+           else {
+             counter--;
+           }
+           // when time runs out and loading screen is gone
+           if (counter < -1) {
+             gameStart = true;
+             io.sockets.emit('StartGame');
+             clearInterval(countdown);
+           }
+        }, 1000);
+    }
     // Connected client adding New Tank
     socket.on('ClientNewTank',
       function(data) {
@@ -82,18 +126,22 @@ io.sockets.on('connection',
         // Add new tank to array
         // First check if this tank is already in our list
         var tankFound = false;
-        if(tanks !== undefined) {
+        if (tanks && tanks.length !== 0) {
           for(var i=0; i < tanks.length; i++) {
             if(tanks[i].tankid == data.tankid) {
                     tankFound = true;
                 }
             }
         }
-
+        // CAM'S CODE starts counter on first join
+        else {
+          StartCounter(60, 5);
+        }
+        // CAM'S CODE added team
         let newTank = { x: Number(data.x), y: Number(data.y), 
-          heading: Number(data.heading), tankColor: data.tankColor, 
-          tankid: data.tankid, playername: data.playername };
-
+          heading: Number(data.heading), tankColor: data.tankColor,
+          tankid: data.tankid, playername: data.playername, team: teamColor };
+        
         // Add this tank to the end of the array if not in array
         if(!tankFound)
           tanks.push(newTank);
@@ -119,7 +167,7 @@ io.sockets.on('connection',
       function(data) {
 
         // Data comes in as whatever was sent, including objects
-        console.log('Move Tank: ' + JSON.stringify(data));
+        //console.log('Move Tank: ' + JSON.stringify(data));
 
         // Change the local tank table
         if(tanks !== undefined) {
