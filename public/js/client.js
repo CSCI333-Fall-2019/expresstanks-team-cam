@@ -5,8 +5,6 @@ let shots = []; // All shots in the game
 var mytankid;
 var myTankIndex = -1;
 var startColor;
-//CAM'S CODE for team color to be set
-var curTeamColor;
 //CAM'S CODE for start of game
 var gameStarted = false, lobbyVisible = true;
 //CAM'S CODE for easier placing of text
@@ -54,7 +52,6 @@ function setup() {
   socket.on('ServerResetAll', ServerResetAll);
   socket.on('ServerMoveShot', ServerMoveShot);
   socket.on('ServerNewShot', ServerNewShot);
-  socket.on('SendTeamColor', SendTeamColor);
   socket.on('UpdateCounter', UpdateCounter);
   socket.on('HideLobby', HideLobby);
   socket.on('StartGame', StartGame);
@@ -202,11 +199,6 @@ function draw() {
   
   //  ***** Socket communication handlers ******
   //CAM'S CODE various functions
-  function SendTeamColor(data) {
-    curTeamColor = data;
-    console.log("CurTeamColor: ", curTeamColor);
-  }
-
   function UpdateCounter(data) {
     var counter = document.getElementById('countDown');
     //makes one digit numbers centered & red
@@ -271,12 +263,15 @@ function draw() {
      }
   }
   function LateComer() {
-    HideLobby();
-    StartGame();
-    document.getElementById('youLate').style.display = "block";
+    // Don't show message for those playing
+    if (lobbyVisible) {
+      HideLobby();
+      StartGame();
+      document.getElementById('youLate').style.display = "block";
+    }
   }
   //CAM'S CODE functions end
-  function ServerReadyAddNew(data) {
+  function ServerReadyAddNew(data, teamColor) {
     console.log('Server Ready');
 
     // Reset the tanks
@@ -285,14 +280,10 @@ function draw() {
     myTankIndex = -1;
 
     //CAM'S CODE added color handling
-    socket.emit('GetTeamColor');
-    //Wait for server to respond with teamColor
-    setTimeout(() => {
-      console.log("curTeamColor: '", curTeamColor, "'");
-      if (curTeamColor == "Red")
-        startColor = color(255, 0, 0);
-      else
-        startColor = color(0, 0, 255);
+    if (teamColor == "Red")
+      startColor = color(255, 0, 0);
+    else
+      startColor = color(0, 0, 255);
 
       // Create the new tank
       // Make sure it's starting position is at least 20 pixels from the border of all walls
@@ -307,7 +298,6 @@ function draw() {
 
       // Send this new tank to the server to add to the list
       socket.emit('ClientNewTank', newTank);
-    }, 1500);
   }
 
     // Server got new tank -- add it to the list

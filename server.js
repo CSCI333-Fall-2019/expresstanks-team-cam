@@ -7,7 +7,7 @@ const request = require('request');
 var tanks = [];
 var shots = [];
 //CAM'S CODE variables for team colors & game start info
-var teamColor = "Red", teamNumber = 0;
+var teamColor = "Blue", teamNumber = 1;
 var lobbyVisible = true;
 
 // Set up the server
@@ -64,7 +64,8 @@ io.sockets.on('connection',
         console.log('New Client Join: ' + data);
       
         // sending to individual socketid (private message)
-        io.to(socket.id).emit('ServerReadyAddNew', tanks);
+        // CAM'S CODE added teamColor as a parameter
+        io.to(socket.id).emit('ServerReadyAddNew', tanks, teamColor);
 
         // Send to all clients but sender socket
         //socket.broadcast.emit('NewTank', data);
@@ -72,19 +73,6 @@ io.sockets.on('connection',
         // This is a way to send to everyone including sender
         // io.sockets.emit('message', "this goes to everyone");
 
-      }
-    );
-    //CAM'S CODE added new function to change team
-    socket.on('GetTeamColor',
-      function() {
-        console.log("Team Color: ", teamColor);
-        if (teamColor == "Red") {
-          teamNumber++;
-          teamColor = "Blue";
-        }
-        else
-          teamColor = "Red";
-        io.sockets.emit('SendTeamColor', teamColor);
       }
     );
     //CAM'S CODE function for counting down to start
@@ -138,11 +126,19 @@ io.sockets.on('connection',
           else {
             StartCounter(10, 5);
           }
-          // CAM'S CODE added team
+          // CAM'S CODE added team color and number
           let newTank = { x: Number(data.x), y: Number(data.y), 
             heading: Number(data.heading), tankColor: data.tankColor,
             tankid: data.tankid, playername: data.playername,
             team: teamColor, teamNum: teamNumber, beenDrawn: false};
+          
+          // CAM'S CODE after tank set up, switch up colors
+          if (teamColor == "Red") {
+            teamNumber++;
+            teamColor = "Blue";
+          }
+          else
+            teamColor = "Red";
           
           // Add this tank to the end of the array if not in array
           if(!tankFound)
@@ -166,8 +162,6 @@ io.sockets.on('connection',
 
       }
     );
-
-
     // Connected client moving Tank
     socket.on('ClientMoveTank',
       function(data) {
