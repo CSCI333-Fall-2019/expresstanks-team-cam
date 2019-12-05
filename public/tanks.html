@@ -17,33 +17,46 @@
     <body>
         <form action="/GetEm" method="post">
             <!--CAM'S CODE-->
-            <div id="loadingScreen" class="loading-screen">
-                <div id="blueBox1" class="player-blue" style="top:30%; left:5%;"></div>
-                <div id="blueBox2" class="player-blue" style="top:30%; left:25%;"></div>
-                <div id="blueBox3" class="player-blue" style="top:60%; left:5%;"></div>
-                <div id="blueBox4" class="player-blue" style="top:60%; left:25%;"></div>
+            <div id="lobbyScreen" class="lobby-screen">
+                <div class="player-blue" style="top:30%; left:5%;"></div>
+                <div class="player-blue" style="top:30%; left:25%;"></div>
+                <div class="player-blue" style="top:60%; left:5%;"></div>
+                <div class="player-blue" style="top:60%; left:25%;"></div>
                 
-                <div id="redBox1" class="player-red" style="top:30%; left:60%;"></div>
-                <div id="redBox2" class="player-red" style="top:30%; left:80%;"></div>
-                <div id="redBox3" class="player-red" style="top:60%; left:60%;"></div>
-                <div id="redBox4" class="player-red" style="top:60%; left:80%;"></div>
+                <div class="player-red" style="top:30%; left:60%;"></div>
+                <div class="player-red" style="top:30%; left:80%;"></div>
+                <div class="player-red" style="top:60%; left:60%;"></div>
+                <div class="player-red" style="top:60%; left:80%;"></div>
             </div>
+            <p id="blueName1" class="player-names" style="top:332px; left:16px"></p>
+            <p id="blueName2" class="player-names" style="top:332px; left:135px"></p>
+            <p id="blueName3" class="player-names" style="top:510px; left:16px"></p>
+            <p id="blueName4" class="player-names" style="top:510px; left:135px"></p>
+            
+            <p id="redName1" class="player-names" style="top:332px; left:345px"></p>
+            <p id="redName2" class="player-names" style="top:332px; left:465px"></p>
+            <p id="redName3" class="player-names" style="top:510px; left:345px"></p>
+            <p id="redName4" class="player-names" style="top:510px; left:465px"></p>
+
             <h1 id="countDown" class="countdown"></h1>
+
             <h1 id="blueTeamName" class="team-names" style="color:blue; left: 20px;">Blue Team</h1>
             <h1 id="redTeamName" class="team-names" style="color:red; left: 345px;">Red Team</h1>
             <div id="midLine" class="middle-line"></div>
+            <h1 id="youLate" class="late-message">Game in Session Check Back Later :/</h1>
             <!--CAM'S CODE-->
             <h1>Express Tanks <input onclick="Restart()" type="button" value="Restart"></h1>
             <input id="playerName" name="PlayerName" type="hidden" value="<%= PlayerName %>" />
-            <div id="sketch-holder">
+            <div id="sketch-holder" class="generic">
                 <!-- Our sketch will go here! -->
             </div>
-            </form>
 
+            </form>
+        <!-- CAM'S CODE removed these since sketch is now an absolute postion
         <footer>
             <p class="footer-contents">Developed with <span style="color:red">♥</span> by CSCI-333 :: Computer Networking</p>
             <p class="footer-contents">Copyright ©2019 BrettHuffman.com All Rights Reserved</p>
-        </footer>
+        </footer>-->
         <script src="js/set-background.js"></script>
 
     </body>

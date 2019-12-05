@@ -7,8 +7,8 @@ const request = require('request');
 var tanks = [];
 var shots = [];
 //CAM'S CODE variables for team colors & game start info
-var teamColor = "Red";
-var gameStart = false, loadScreen = true;
+var teamColor = "Red", teamNumber = 0;
+var lobbyVisible = true;
 
 // Set up the server
 // process.env.PORT is related to deploying on AWS
@@ -78,39 +78,39 @@ io.sockets.on('connection',
     socket.on('GetTeamColor',
       function() {
         console.log("Team Color: ", teamColor);
-        if (teamColor == "Red")
+        if (teamColor == "Red") {
+          teamNumber++;
           teamColor = "Blue";
+        }
         else
           teamColor = "Red";
-        console.log("Team Color: ", teamColor);
         io.sockets.emit('SendTeamColor', teamColor);
       }
     );
-    //CAM'S CODE
+    //CAM'S CODE function for counting down to start
     var StartCounter = function(waitTime, startTime) {
         var counter = waitTime;
         var countdown = setInterval(() => {
            //for the final message
-           if (counter <= 0 && !loadScreen)
-             io.sockets.emit('UpdateCounter', "GO");
+           if (counter <= 0 && !lobbyVisible)
+             io.sockets.emit('UpdateCounter', "GO!");
            else
              io.sockets.emit('UpdateCounter', counter);
 
            if (counter > 0)
             counter--;
-           // when timer runs out and loading screen still up
-           else if (loadScreen) {
+           // when timer runs out and lobby still up
+           else if (lobbyVisible) {
              counter = startTime;
-             io.sockets.emit('HideLoadScreen');
-             loadScreen = false;
+             io.sockets.emit('HideLobby');
+             lobbyVisible = false;
            }           
-           // add one more second for the "GO" message
+           // add one more second for the "GO!" message
            else {
              counter--;
            }
-           // when time runs out and loading screen is gone
+           // when time runs out and lobby screen is gone
            if (counter < -1) {
-             gameStart = true;
              io.sockets.emit('StartGame');
              clearInterval(countdown);
            }
@@ -122,38 +122,44 @@ io.sockets.on('connection',
 
         // Data comes in as whatever was sent, including objects
         console.log('New Tank: ' + JSON.stringify(data));
+        //CAM'S CODE can't join if too many players or game started
+        if (teamNumber < 5 && lobbyVisible) {
+          // Add new tank to array
+          // First check if this tank is already in our list
+          var tankFound = false;
+          if (tanks && tanks.length !== 0) {
+            for(var i=0; i < tanks.length; i++) {
+              if(tanks[i].tankid == data.tankid) {
+                      tankFound = true;
+                  }
+              }
+          }
+          // CAM'S CODE starts counter on first join
+          else {
+            StartCounter(10, 5);
+          }
+          // CAM'S CODE added team
+          let newTank = { x: Number(data.x), y: Number(data.y), 
+            heading: Number(data.heading), tankColor: data.tankColor,
+            tankid: data.tankid, playername: data.playername,
+            team: teamColor, teamNum: teamNumber, beenDrawn: false};
+          
+          // Add this tank to the end of the array if not in array
+          if(!tankFound)
+            tanks.push(newTank);
 
-        // Add new tank to array
-        // First check if this tank is already in our list
-        var tankFound = false;
-        if (tanks && tanks.length !== 0) {
-          for(var i=0; i < tanks.length; i++) {
-            if(tanks[i].tankid == data.tankid) {
-                    tankFound = true;
-                }
-            }
+            console.log(tanks);
+
+          // Send the tank update after giving a quick delay for initialization
+          const timeoutObj = setTimeout(() => {
+            // Send to all clients but sender socket
+  //          socket.broadcast.emit('ServerNewTankAdd', tanks);
+            io.sockets.emit('ServerNewTankAdd', tanks);
+          }, 1500);
         }
-        // CAM'S CODE starts counter on first join
         else {
-          StartCounter(60, 5);
+          io.sockets.emit('LateComer');
         }
-        // CAM'S CODE added team
-        let newTank = { x: Number(data.x), y: Number(data.y), 
-          heading: Number(data.heading), tankColor: data.tankColor,
-          tankid: data.tankid, playername: data.playername, team: teamColor };
-        
-        // Add this tank to the end of the array if not in array
-        if(!tankFound)
-          tanks.push(newTank);
-
-          console.log(tanks);
-
-        // Send the tank update after giving a quick delay for initialization
-        const timeoutObj = setTimeout(() => {
-          // Send to all clients but sender socket
-//          socket.broadcast.emit('ServerNewTankAdd', tanks);
-          io.sockets.emit('ServerNewTankAdd', tanks);
-        }, 1500);
 
         // Send to all clients but sender socket
 //        socket.broadcast.emit('ServerNewTankAdd', tanks);

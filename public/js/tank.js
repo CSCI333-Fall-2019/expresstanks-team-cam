@@ -1,4 +1,3 @@
-
 var tankWidth = 20;
 var tankHeight = 30;
 
@@ -16,6 +15,9 @@ function Tank(startPos, startColor, newtankid, playerName) {
     this.playerName = playerName;
     //CAM'S CODE
     this.team = "";
+    this.teamNum = 0;
+    this.beenDrawn = false;
+    this.lobbyPos;
     //CAM'S CODE
 
     // For an optional boost feature
@@ -29,13 +31,18 @@ function Tank(startPos, startColor, newtankid, playerName) {
     }
 
     // Render - to render the tank to the screen
-    this.render = function() {
-
+    //CAM'S CODE added param to render for lobby
+    this.render = function(lobbyVisible) {
         push();
-
-        translate(this.pos.x, this.pos.y);
-        rotate(this.heading + PI / 2);
-        
+        // CAM'S CODE move to lobby position while visible
+        if (!lobbyVisible) {
+          translate(this.pos.x, this.pos.y);
+          rotate(this.heading + PI / 2);
+        }
+        else
+        {
+          translate(this.lobbyPos.x, this.lobbyPos.y);
+        }
         if(this.destroyed) {
           // Show destroyed tank
           fill('red');
@@ -55,20 +62,24 @@ function Tank(startPos, startColor, newtankid, playerName) {
           point(0, 0);
         }
         pop();
-
-        push();
-        translate(this.pos.x, this.pos.y);
-        // CAM'S CODE self text is white
-        if (this.tankid==mytankid)
-          fill('white');
-        else
-          fill(this.tankColor);
-        textAlign(CENTER);
-        if(DEBUG && DEBUG==1)
-          text(this.tankid, 0, 30);
-        else
-          text(this.playerName, 0, 30);
-        pop();
+        // CAM'S CODE don't print text during lobby
+        if (!lobbyVisible) {
+          push();
+          translate(this.pos.x, this.pos.y);
+          // CAM'S CODE self text is white
+          if (this.tankid==mytankid)
+            fill('white');
+          else
+            fill(this.tankColor);
+          textAlign(CENTER);
+          
+            if(DEBUG && DEBUG==1)
+              text(this.tankid, 0, 30);
+            else
+              text(this.playerName, 0, 30);
+        
+          pop();
+        }
     }
 
     // Moving tank

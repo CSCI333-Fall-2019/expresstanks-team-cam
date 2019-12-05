@@ -9,6 +9,9 @@ var startColor;
 var curTeamColor;
 //CAM'S CODE for start of game
 var gameStarted = false, lobbyVisible = true;
+//CAM'S CODE for easier placing of text
+var blueNames = [ 'blueName1', 'blueName2', 'blueName3','blueName4' ];
+var redNames = [ 'redName1', 'redName2', 'redName3', 'redName4' ];
 
 var socket;
 var oldTankx, oldTanky, oldTankHeading;
@@ -53,8 +56,9 @@ function setup() {
   socket.on('ServerNewShot', ServerNewShot);
   socket.on('SendTeamColor', SendTeamColor);
   socket.on('UpdateCounter', UpdateCounter);
-  socket.on('HideLoadScreen', HideLoadScreen);
+  socket.on('HideLobby', HideLobby);
   socket.on('StartGame', StartGame);
+  socket.on('LateComer', LateComer);
 
   // Join (or start) a new game
   socket.on('connect', function(data) {
@@ -65,9 +69,9 @@ function setup() {
   
 // Draw the screen and process the position updates
 function draw() {
-    background(0);
-    //CAM'S CODE only draw once loading screen is gone
-    if (!lobbyVisible) {
+      //CAM'S CODE no background draw at beginning
+      if (!lobbyVisible)
+        background(0);
       // Loop counter
       if(loopCount > 359*10000)
         loopCount = 0;
@@ -91,7 +95,9 @@ function draw() {
       if(tanks && tanks.length > 0) {
         for (var t = 0; t < tanks.length; t++) {
           if(tanks[t].tankid==mytankid) {
-            tanks[t].render();
+            // CAM'S CODE wait for lobby pos to be calculated
+            if (tanks[t].beenDrawn)
+              tanks[t].render(lobbyVisible);
             tanks[t].turn();
             tanks[t].update();
 
@@ -109,7 +115,9 @@ function draw() {
           else {  // Only render if within 150 pixels
   //          var dist = Math.sqrt( Math.pow((tanks[myTankIndex].pos.x-tanks[t].pos.x), 2) + Math.pow((tanks[myTankIndex].pos.y-tanks[t].pos.y), 2) );
   //          if(dist < 151)
-              tanks[t].render();
+              // CAM'S CODE wait for lobby pos to be calculated
+              if (tanks[t].beenDrawn)
+                tanks[t].render(lobbyVisible);
           }
         }
         
@@ -134,7 +142,6 @@ function draw() {
         */
 
       }
-    }
 
       // To keep this program from being too chatty => Only send server info if something has changed
     if(tanks && tanks.length > 0 && myTankIndex > -1
@@ -179,8 +186,6 @@ function draw() {
         tanks[myTankIndex].moveForward(-1.0);
       }
     }
-
-
   }
 
   // Release Key
@@ -207,26 +212,68 @@ function draw() {
     //makes one digit numbers centered & red
     if (data < 10) {
       counter.style.left = "283px";
-      counter.style.color = "#AA0000";
+      counter.style.color = "#BB0000";
+    }
+    //makes go centered & green
+    else if (data === "GO!") {
+      counter.style.left = "255px";
+      counter.style.color = "#00BB00";
     }
     //makes two digit numbers centered & green
     else {
       counter.style.left = "270px";
-      counter.style.color = "#00AA00";
+      counter.style.color = "#00BB00";
     }
     counter.innerText = data;
   }
-  function HideLoadScreen() {
-    document.getElementById('loadingScreen').style.display = "none";
+  function HideLobby() {
+    //hides all lobby elements
+    document.getElementById('lobbyScreen').style.display = "none";
     document.getElementById('blueTeamName').style.display = "none";
     document.getElementById('redTeamName').style.display = "none";
     document.getElementById('midLine').style.display = "none";
+
+    blueNames.forEach(name => document.getElementById(name).style.display = "none");
+    redNames.forEach(name => document.getElementById(name).style.display = "none");
+
+    document.getElementById('countDown').style.zIndex = 101;
 
     lobbyVisible = false;
   }
   function StartGame() {
     gameStarted = true;
     document.getElementById('countDown').style.display = "none";
+  }
+  function DrawStartTank(tank) {
+    var startPlace, startLeft, startTop;
+    var lobbyX, lobbyY;
+     if (tank.team == "Blue") {
+      startPlace = document.getElementById(blueNames[tank.teamNum - 1]);
+     }
+     else
+      startPlace = document.getElementById(redNames[tank.teamNum - 1]);
+
+     startPlace.innerText = tank.playername;
+
+     startLeft = startPlace.style.left.substring(0, startPlace.style.left.length - 2);
+     startTop = startPlace.style.top.substring(0, startPlace.style.top.length - 2);
+     
+     lobbyX = parseInt(startLeft, 10) + 62;
+     lobbyY = parseInt(startTop, 10) - 100;
+
+     for(var t=0; t < tanks.length; t++) {
+       // If found a my tank in list
+       if(tanks[t].tankid == tank.tankid) {
+          //makes lobby position of the tank a little above the text
+          tanks[t].lobbyPos = createVector(lobbyX, lobbyY);
+          tanks[t].beenDrawn = true;
+       }
+     }
+  }
+  function LateComer() {
+    HideLobby();
+    StartGame();
+    document.getElementById('youLate').style.display = "block";
   }
   //CAM'S CODE functions end
   function ServerReadyAddNew(data) {
@@ -237,7 +284,7 @@ function draw() {
     mytankid = undefined;
     myTankIndex = -1;
 
-    //CAM'S CODE
+    //CAM'S CODE added color handling
     socket.emit('GetTeamColor');
     //Wait for server to respond with teamColor
     setTimeout(() => {
@@ -246,7 +293,6 @@ function draw() {
         startColor = color(255, 0, 0);
       else
         startColor = color(0, 0, 255);
-      //CAM'S CODE
 
       // Create the new tank
       // Make sure it's starting position is at least 20 pixels from the border of all walls
@@ -286,10 +332,12 @@ function draw() {
             // Add this tank to the end of the array
             let startPos = createVector(Number(data[d].x), Number(data[d].y));
             let c = color(data[d].tankColor.levels[0], data[d].tankColor.levels[1], data[d].tankColor.levels[2]);
-            // CAM'S CODE switched c and tankid around
             let newTankObj = new Tank(startPos, c, data[d].tankid, data[d].playername);
             tanks.push(newTankObj);
           }
+          //CAM'S CODE for starting tanks
+          if (!data[d].beenDrawn)
+             DrawStartTank(data[d]);
           tankFound = false;
         }
       }
