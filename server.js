@@ -1,4 +1,3 @@
-
 var express = require('express');
 var app = express();
 const request = require('request');
@@ -124,7 +123,7 @@ io.sockets.on('connection',
           }
           // CAM'S CODE starts counter on first join
           else {
-            StartCounter(10, 5);
+            StartCounter(30, 15);
           }
           // CAM'S CODE added team color and number
           let newTank = { x: Number(data.x), y: Number(data.y), 
